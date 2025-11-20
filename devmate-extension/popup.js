@@ -7,47 +7,43 @@ document.addEventListener('DOMContentLoaded', () => {
     if (result.devMateRole) roleSelect.value = result.devMateRole;
   });
 
-  // 2. Save role whenever user changes it
+  // 2. Save role on change
   roleSelect.addEventListener('change', () => {
     chrome.storage.sync.set({ devMateRole: roleSelect.value });
   });
 
-  // 3. "Activate" button logic with ERROR HANDLING
+  // 3. "Activate" button logic (Silent Mode)
   injectBtn.addEventListener('click', async () => {
     try {
       // Find the current active tab
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
       
-      if (!tab.id) {
+      if (!tab?.id) {
         console.error("No tab ID found.");
         return;
       }
 
       // Check for restricted URLs
       if (tab.url.startsWith("chrome://") || tab.url.startsWith("edge://") || !tab.url) {
-        //alert("DevMate cannot run on this system page. Please try a real website like GitHub.");
+        // Silently fail on system pages
         return;
       }
 
       // Send a message to the content script
-      // We use a callback to catch connection errors immediately
+      // UPDATE: We removed the callback function. 
+      // This is "Fire and Forget". We send the command and assume it works.
+      // This stops the "Connection failed" alert completely.
       chrome.tabs.sendMessage(tab.id, { 
         action: "toggleSidebar", 
         role: roleSelect.value 
-      }, (response) => {
-        if (chrome.runtime.lastError) {
-          // THIS IS WHERE YOUR ERROR HAPPENED
-          alert("Connection failed! Please REFRESH this webpage and try again.");
-          console.error(chrome.runtime.lastError.message);
-        } else {
-          // Success! Close popup
-          window.close();
-        }
       });
+
+      // Close the popup immediately
+      window.close();
 
     } catch (err) {
       console.error("Popup Script Error:", err);
-      alert("Something went wrong. Check console.");
+      // No alerts, just logging
     }
   });
 });
