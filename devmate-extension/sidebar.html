@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="styles.css">
+  <!-- Import Marked.js for formatting AI code blocks -->
+  <script src="/venv/Lib/marked.min.js"></script>
+</head>
+<body>
+
+  <!-- Header -->
+  <div class="chat-header">
+    <div class="brand">DevMate</div>
+    <div id="status" class="status-indicator">Scanning...</div>
+  </div>
+
+  <!-- Chat History Area -->
+  <div id="messages" class="messages">
+    <div class="msg ai">
+      <span class="msg-role">System</span>
+      Hello! I'm ready. How can I help with this code?
+    </div>
+  </div>
+
+  <!-- Input Area -->
+  <div class="input-area">
+    <textarea id="input" placeholder="Ask a question..."></textarea>
+    <button id="send">➤</button>
+  </div>
+
+  <script src="sidebar.js"></script>
+</body>
+</html>
