@@ -7,8 +7,7 @@ import os
 # --- CONFIGURATION ---
 # 1. Get your API Key from: https://aistudio.google.com/app/apikey
 # 2. Paste it below inside the quotes
-GEMINI_API_KEY = "AIzaSyDRilB-2EqgLaKtgMw3VPEL97VsQvaCJ-k" 
-
+GEMINI_API_KEY = os.getenv("GEMINI_API_SECRET_KEY") 
 # Configure the AI SDK
 genai.configure(api_key=GEMINI_API_KEY)
 
