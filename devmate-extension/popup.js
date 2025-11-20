@@ -12,18 +12,42 @@ document.addEventListener('DOMContentLoaded', () => {
     chrome.storage.sync.set({ devMateRole: roleSelect.value });
   });
 
-  // 3. "Activate" button logic
+  // 3. "Activate" button logic with ERROR HANDLING
   injectBtn.addEventListener('click', async () => {
-    // Find the current active tab
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    
-    // Send a message to the content script on that tab
-    chrome.tabs.sendMessage(tab.id, { 
-      action: "toggleSidebar", 
-      role: roleSelect.value 
-    });
-    
-    // Close the popup
-    window.close();
+    try {
+      // Find the current active tab
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      
+      if (!tab.id) {
+        console.error("No tab ID found.");
+        return;
+      }
+
+      // Check for restricted URLs
+      if (tab.url.startsWith("chrome://") || tab.url.startsWith("edge://") || !tab.url) {
+        //alert("DevMate cannot run on this system page. Please try a real website like GitHub.");
+        return;
+      }
+
+      // Send a message to the content script
+      // We use a callback to catch connection errors immediately
+      chrome.tabs.sendMessage(tab.id, { 
+        action: "toggleSidebar", 
+        role: roleSelect.value 
+      }, (response) => {
+        if (chrome.runtime.lastError) {
+          // THIS IS WHERE YOUR ERROR HAPPENED
+          alert("Connection failed! Please REFRESH this webpage and try again.");
+          console.error(chrome.runtime.lastError.message);
+        } else {
+          // Success! Close popup
+          window.close();
+        }
+      });
+
+    } catch (err) {
+      console.error("Popup Script Error:", err);
+      alert("Something went wrong. Check console.");
+    }
   });
 });

@@ -4,38 +4,43 @@ const sendBtn = document.getElementById('send');
 const statusDiv = document.getElementById('status');
 let currentContext = "";
 
-// 1. Ask Parent (Content Script) for the page code
+// --- INIT ---
 window.parent.postMessage({ type: "DEVMATE_GET_CONTEXT" }, "*");
 
-// 2. Receive the page code
 window.addEventListener("message", (event) => {
   if (event.data.type === "DEVMATE_CONTEXT_RESULT") {
     currentContext = event.data.context;
-    statusDiv.innerText = "Ready";
+    statusDiv.innerText = "Connected";
     statusDiv.classList.add("active");
   }
 });
 
-// 3. Send Message Logic
+// --- SEND LOGIC ---
+input.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    handleSend();
+  }
+});
+
 sendBtn.addEventListener('click', handleSend);
 
 async function handleSend() {
   const text = input.value.trim();
   if (!text) return;
 
-  // Show User Message
+  // User Message
   addMessage("You", text, 'user');
   input.value = "";
   
-  // Show Loading
-  addMessage("DevMate", "Thinking...", 'ai', 'loading-msg');
+  // AI Loading
+  const loadingId = addLoading();
 
   try {
-    // Get Role from settings
     const data = await chrome.storage.sync.get(['devMateRole']);
     const role = data.devMateRole || "Senior Engineer";
 
-    // CALL YOUR LOCAL DJANGO BACKEND
+    // Ensure this URL matches your Django server!
     const response = await fetch('http://127.0.0.1:8000/api/chat/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -48,24 +53,82 @@ async function handleSend() {
 
     const result = await response.json();
     
-    // Remove loading and show AI response
-    document.getElementById('loading-msg').remove();
+    // Remove loading
+    document.getElementById(loadingId).remove();
+    
+    // Add AI Response
     addMessage("DevMate", result.response, 'ai');
 
   } catch (e) {
-    document.getElementById('loading-msg').remove();
-    addMessage("System", "Error: Check if Django is running.", 'ai');
+    document.getElementById(loadingId).remove();
+    addMessage("System", "Error: Brain disconnected. Is Python running?", 'ai');
   }
 }
 
-function addMessage(name, text, type, id=null) {
+function addMessage(name, text, type) {
   const div = document.createElement('div');
   div.className = `msg ${type}`;
-  if(id) div.id = id;
   
-  const content = type === 'ai' ? marked.parse(text) : text;
-  div.innerHTML = `<span class="msg-role">${name}</span>` + content;
+  // If AI, use Markdown + Add Copy Buttons
+  if (type === 'ai') {
+    // Wrap content in a div for styling
+    const contentWrapper = document.createElement('div');
+    contentWrapper.className = 'ai-content';
+    // Requires marked.js to be loaded in sidebar.html
+    contentWrapper.innerHTML = marked.parse(text);
+    div.appendChild(contentWrapper);
+    
+    messagesDiv.appendChild(div);
+    
+    // INJECT COPY BUTTONS
+    addCopyButtons(contentWrapper);
+  } else {
+    div.innerText = text;
+    messagesDiv.appendChild(div);
+  }
   
+  messagesDiv.scrollTop = messagesDiv.scrollHeight;
+}
+
+function addLoading() {
+  const id = "loading-" + Date.now();
+  const div = document.createElement('div');
+  div.id = id;
+  div.className = "msg ai";
+  div.innerHTML = `<div class="ai-content">Thinking...</div>`;
   messagesDiv.appendChild(div);
   messagesDiv.scrollTop = messagesDiv.scrollHeight;
+  return id;
+}
+
+// --- THE MAGIC COPY FUNCTION ---
+function addCopyButtons(element) {
+  // Find all <pre> blocks (which contain <code>)
+  const preBlocks = element.querySelectorAll('pre');
+
+  preBlocks.forEach(pre => {
+    // Create the button
+    const btn = document.createElement('button');
+    btn.className = 'copy-btn';
+    btn.innerText = 'Copy';
+
+    // Add Click Event
+    btn.addEventListener('click', () => {
+      const code = pre.querySelector('code').innerText;
+      
+      // Copy to clipboard
+      navigator.clipboard.writeText(code).then(() => {
+        // Visual Feedback
+        btn.innerText = 'Copied!';
+        btn.classList.add('copied');
+        setTimeout(() => {
+          btn.innerText = 'Copy';
+          btn.classList.remove('copied');
+        }, 2000);
+      });
+    });
+
+    // Append button to the <pre> block
+    pre.appendChild(btn);
+  });
 }
