@@ -28,7 +28,7 @@
 ### **Part 1: The Brain (Backend)**
 
 1. **Clone the repository:**  
-   git clone \[https://github.com/yourusername/devmate.git\](https://github.com/yourusername/devmate.git)  
+   git clone \[https://github.com/chitres178779/devmate.git\](https://github.com/chitresh178779/devmate.git)  
    cd devmate/devmate-backend
 
 2. **Create and activate a virtual environment:**  
