@@ -28,26 +28,27 @@
 ### **Part 1: The Brain (Backend)**
 
 1. **Clone the repository:**  
-   git clone \[https://github.com/chitres178779/devmate.git\](https://github.com/chitresh178779/devmate.git)  
+   git clone \[https://github.com/chitres178779/devmate.git\]
+              (https://github.com/chitresh178779/devmate.git)  
    cd devmate/devmate-backend
 
-2. **Create and activate a virtual environment:**  
+3. **Create and activate a virtual environment:**  
    python \-m venv venv  
    \# Windows:  
    venv\\Scripts\\activate  
    \# Mac/Linux:  
    source venv/bin/activate
 
-3. **Install dependencies:**  
+4. **Install dependencies:**  
    pip install \-r requirements.txt
 
-4. Set up Environment Variables:  
+5. Set up Environment Variables:  
    Create a .env file in the devmate-backend folder (same level as manage.py) and add your Google Gemini API Key:  
    GEMINI\_API\_KEY=your\_api\_key\_here  
    DEBUG=True  
    SECRET\_KEY=django-insecure-dev-key  
    🔑 **Get your key here:** [Google AI Studio](https://aistudio.google.com/app/apikey)  
-5. **Run the Server:**  
+6. **Run the Server:**  
    python manage.py migrate  
    python manage.py runserver
 
