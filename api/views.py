@@ -5,9 +5,10 @@ import google.generativeai as genai
 import os
 
 # --- CONFIGURATION ---
-# 1. Get your API Key from: https://aistudio.google.com/app/apikey
-# 2. Paste it below inside the quotes
-GEMINI_API_KEY = os.getenv("GEMINI_API_SECRET_KEY") 
+# Get your API key from https://aistudio.google.com/app/apikey and put it in .env
+# as GEMINI_API_KEY (as documented in the README). The older GEMINI_API_SECRET_KEY
+# name is still accepted so existing .env files keep working.
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY") or os.getenv("GEMINI_API_SECRET_KEY")
 # Configure the AI SDK
 genai.configure(api_key=GEMINI_API_KEY)
 
