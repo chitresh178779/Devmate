@@ -4,16 +4,40 @@ const sendBtn = document.getElementById('send');
 const statusDiv = document.getElementById('status');
 let currentContext = "";
 
-// --- INIT ---
-window.parent.postMessage({ type: "DEVMATE_GET_CONTEXT" }, "*");
+// --- CONTEXT ---
+// The page can change after the sidebar opens, so we request a fresh
+// snapshot of the screen right before every message instead of only once.
+let contextRequestId = 0;
+const pendingContext = new Map();
 
 window.addEventListener("message", (event) => {
-  if (event.data.type === "DEVMATE_CONTEXT_RESULT") {
-    currentContext = event.data.context;
+  if (event.source !== window.parent) return;
+  if (event.data?.type === "DEVMATE_CONTEXT_RESULT") {
+    currentContext = event.data.context || "";
     statusDiv.innerText = "Connected";
     statusDiv.classList.add("active");
+    const resolve = pendingContext.get(event.data.requestId);
+    if (resolve) {
+      pendingContext.delete(event.data.requestId);
+      resolve(currentContext);
+    }
   }
 });
+
+function requestContext(timeoutMs = 1500) {
+  const requestId = ++contextRequestId;
+  return new Promise((resolve) => {
+    pendingContext.set(requestId, resolve);
+    window.parent.postMessage({ type: "DEVMATE_GET_CONTEXT", requestId }, "*");
+    // Fall back to the last known context if the page doesn't answer in time.
+    setTimeout(() => {
+      if (pendingContext.delete(requestId)) resolve(currentContext);
+    }, timeoutMs);
+  });
+}
+
+// --- INIT ---
+requestContext();
 
 // --- SEND LOGIC ---
 input.addEventListener('keydown', (e) => {
@@ -39,6 +63,7 @@ async function handleSend() {
   try {
     const data = await chrome.storage.sync.get(['devMateRole']);
     const role = data.devMateRole || "Senior Engineer";
+    const context = await requestContext();
 
     // Ensure this URL matches your Django server!
     const response = await fetch('http://127.0.0.1:8000/api/chat/', {
@@ -46,7 +71,7 @@ async function handleSend() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         role: role,
-        code_context: currentContext,
+        code_context: context,
         query: text
       })
     });
