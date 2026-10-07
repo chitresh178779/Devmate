@@ -75,15 +75,63 @@ function createSidebar() {
 }
 
 // Context Scraper
+// Builds a FRESH snapshot of the page every time it is called, so changes made
+// after the sidebar was opened (edits, SPA navigation, new output) are picked up.
+const DEVMATE_MAX_CONTEXT = 15000;
+
+function isVisible(el) {
+  const rect = el.getBoundingClientRect();
+  return rect.width > 0 && rect.height > 0 &&
+    rect.bottom > 0 && rect.top < window.innerHeight;
+}
+
+function collectContext() {
+  const parts = [];
+  const seen = new Set();
+  const add = (label, text) => {
+    text = (text || "").trim();
+    if (!text || seen.has(text)) return;
+    seen.add(text);
+    parts.push(label ? `${label}\n${text}` : text);
+  };
+
+  add("Page:", `${document.title}\n${location.href}`);
+
+  // 1. Whatever the user has selected is the most relevant context.
+  const selection = window.getSelection()?.toString();
+  add("Selected text:", selection);
+
+  // 2. Live editor contents (textareas / code editors) and code blocks currently on screen.
+  const codeSelectors = [
+    "textarea", ".cm-content", ".CodeMirror-code", ".monaco-editor .view-lines",
+    ".ace_text-layer", "pre", "code", ".blob-code-inner", "table.highlight"
+  ].join(",");
+  document.querySelectorAll(codeSelectors).forEach((el) => {
+    if (el.closest("#devmate-container")) return;
+    if (el.parentElement?.closest(codeSelectors)) return; // avoid nested duplicates
+    if (!isVisible(el)) return;
+    add("Code on screen:", el.value !== undefined && el.tagName === "TEXTAREA" ? el.value : el.innerText);
+  });
+
+  // 3. Remaining visible page text as a fallback.
+  const container = document.getElementById("devmate-container");
+  const prevDisplay = container ? container.style.display : null;
+  if (container) container.style.display = "none";
+  add("Visible page text:", document.body.innerText);
+  if (container) container.style.display = prevDisplay;
+
+  return parts.join("\n\n").substring(0, DEVMATE_MAX_CONTEXT);
+}
+
 window.addEventListener("message", (event) => {
-  if (event.data.type === "DEVMATE_GET_CONTEXT") {
-    const code = document.body.innerText.substring(0, 10000); 
-    const iframe = document.querySelector('#devmate-container iframe');
-    if(iframe) {
-      iframe.contentWindow.postMessage({
-        type: "DEVMATE_CONTEXT_RESULT",
-        context: code
-      }, "*");
-    }
+  const iframe = document.querySelector('#devmate-container iframe');
+  // Only answer requests coming from our own sidebar iframe.
+  if (!iframe || event.source !== iframe.contentWindow) return;
+  if (event.data?.type === "DEVMATE_GET_CONTEXT") {
+    iframe.contentWindow.postMessage({
+      type: "DEVMATE_CONTEXT_RESULT",
+      requestId: event.data.requestId,
+      context: collectContext()
+    }, new URL(chrome.runtime.getURL("")).origin);
   }
 });
